@@ -110,6 +110,53 @@ module Backdoor
   end
 
   ##
+  # Challenge CPHR
+  class ChallengeCPHR < ChallengeBase
+    NAME = 'cphr'
+
+    FILE = '/CPHR/index.html'
+    ALPHABET = ('a'..'z').to_a
+    TEXT = 'the flag is'
+
+    def exec
+      log("Getting encrypted text #{FILE}")
+      data = get_static(FILE)
+      match = %r{<div>\s+(.+)\s+</div>}.match(data)
+      data = match[1].clone
+      log(data)
+
+      log('Searching offsets')
+      offsets = []
+      TEXT.chars.each_with_index do |char, i|
+        next unless ALPHABET.include?(char)
+
+        a = ALPHABET.index(data[i])
+        b = ALPHABET.index(char)
+        n = a - b
+        break if offsets.first == n
+
+        offsets << n
+      end
+      log("Offsets: #{offsets}")
+
+      log('Decrypting text')
+      text = String.new
+      enum = offsets.cycle
+      data.each_char do |char|
+        unless ALPHABET.include?(char)
+          text << char
+          next
+        end
+
+        n = ALPHABET.index(char)
+        text << ALPHABET[(n - enum.next) % ALPHABET.length]
+      end
+
+      found(text)
+    end
+  end
+
+  ##
   # HTTP error
   class HTTPError < StandardError
     def initialize(code)
