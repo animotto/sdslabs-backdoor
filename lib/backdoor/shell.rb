@@ -75,6 +75,14 @@ module Backdoor
     end
 
     def cmd_challenge(args)
+      if args.empty?
+        @output.puts('Challenges:')
+        @challenge.list.each do |challenge|
+          @output.puts(" #{challenge}")
+        end
+        return
+      end
+
       name = args.first
       unless @challenge.exist?(name)
         @output.puts('No such challenge')
