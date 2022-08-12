@@ -32,8 +32,6 @@ module Backdoor
   ##
   # ChallengeBase
   class ChallengeBase
-    STATIC_URI = 'http://static.beast.sdslabs.co/static'
-
     @successors = []
 
     class << self
@@ -49,9 +47,7 @@ module Backdoor
       @shell = shell
       @args = args
 
-      @uri_static = URI(STATIC_URI)
-      @client_static = Net::HTTP.new(@uri_static.host, @uri_static.port)
-      @client_static.use_ssl = @uri_static.instance_of?(URI::HTTPS)
+      @client_static = ClientStatic.new
     end
 
     def exec; end
@@ -67,13 +63,6 @@ module Backdoor
     def log(message)
       @shell.output.puts("[#{self.class::NAME}]: #{message}")
     end
-
-    def get_static(path)
-      response = @client_static.get([@uri_static.path, path].join)
-      raise HTTPError.new(response.code), response.code unless response.is_a?(Net::HTTPSuccess)
-
-      response.body
-    end
   end
 
   ##
@@ -86,7 +75,7 @@ module Backdoor
 
     def exec
       log("Downloading #{FILE}")
-      file = get_static(FILE)
+      file = @client_static.get(FILE)
 
       zip_stream = Zip::InputStream.new(StringIO.new(file))
       entry = zip_stream.get_next_entry
@@ -120,7 +109,7 @@ module Backdoor
 
     def exec
       log("Getting encrypted text #{FILE}")
-      data = get_static(FILE)
+      data = @client_static.get(FILE)
       match = %r{<div>\s+(.+)\s+</div>}.match(data)
       data = match[1].clone
       log(data)
@@ -157,15 +146,19 @@ module Backdoor
   end
 
   ##
-  # HTTP error
-  class HTTPError < StandardError
-    def initialize(code)
-      super
-      @code = code
-    end
+  # Challenge 2013-web-50
+  class Challenge2013web50 < ChallengeBase
+    NAME = '2013-web-50'
 
-    def to_s
-      "HTTP error #{@code}"
+    PORT = 10_003
+
+    def exec
+      client = ClientWeb.new(PORT)
+      response = client.get(
+        '/',
+        cookies: { 'username' => 'admin' }
+      )
+      found(response)
     end
   end
 end

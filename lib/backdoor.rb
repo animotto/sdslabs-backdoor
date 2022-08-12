@@ -2,3 +2,4 @@
 
 require 'backdoor/shell'
 require 'backdoor/challenges'
+require 'backdoor/clients'
