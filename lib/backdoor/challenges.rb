@@ -76,7 +76,7 @@ module Backdoor
 
     def exec
       @logger.puts("Downloading #{FILE}")
-      file = @client_static.get(FILE)
+      file = @client_static.get(FILE).body
 
       zip_stream = Zip::InputStream.new(StringIO.new(file))
       entry = zip_stream.get_next_entry
@@ -110,7 +110,7 @@ module Backdoor
 
     def exec
       @logger.puts("Getting encrypted text #{FILE}")
-      data = @client_static.get(FILE)
+      data = @client_static.get(FILE).body
       match = %r{<div>\s+(.+)\s+</div>}.match(data)
       data = match[1].clone
       @logger.puts(data)
@@ -160,7 +160,7 @@ module Backdoor
         cookies: { 'username' => 'admin' }
       )
 
-      found(response)
+      found(response.body)
     end
   end
 
@@ -175,7 +175,7 @@ module Backdoor
       client = ClientWeb.new(PORT)
       @logger.puts('Getting a number')
       response = client.get('/')
-      not_found unless response =~ /Find the sum of First (\d+) prime numbers/
+      not_found unless response.body =~ /Find the sum of First (\d+) prime numbers/
       number = Regexp.last_match(1).to_i
       @logger.puts(number)
       answer = primes(number).sum
@@ -185,7 +185,7 @@ module Backdoor
         data: { 'answer' => answer }
       )
 
-      found(response)
+      found(response.body)
     end
 
     private
@@ -209,6 +209,25 @@ module Backdoor
       end
 
       numbers
+    end
+  end
+
+  ##
+  # Challenge CK
+  class ChallengeCK < ChallengeBase
+    NAME = 'ck'
+
+    PORT = 11_007
+
+    def exec
+      client = ClientWeb.new(PORT)
+      response = client.get(
+        '/',
+        cookies: { 'admin' => 1 }
+      )
+
+      not_found unless response.body =~ /flag is (\w+)/
+      found(Regexp.last_match(1))
     end
   end
 
