@@ -232,6 +232,25 @@ module Backdoor
   end
 
   ##
+  # Challenge BRWSR
+  class ChallengeBRWSR < ChallengeBase
+    NAME = 'brwsr'
+
+    PORT = 11_010
+
+    def exec
+      client = ClientWeb.new(PORT)
+      response = client.get(
+        '/',
+        headers: { 'User-Agent' => 'SDSLabs browser' }
+      )
+
+      not_found unless response.body =~ /flag for you: (\w+)/
+      found(Regexp.last_match(1))
+    end
+  end
+
+  ##
   # Found error
   class FoundError < StandardError; end
 end
