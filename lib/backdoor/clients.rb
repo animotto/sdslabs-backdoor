@@ -47,8 +47,12 @@ module Backdoor
       response.body
     end
 
-    def post(path, data, headers: {}, cookies: {})
-      response = @client.get([@uri.path, path].join, data, prepare_headers(headers, cookies))
+    def post(path, data: {}, headers: {}, cookies: {})
+      response = @client.post(
+        [@uri.path, path].join,
+        URI.encode_www_form(data),
+        prepare_headers(headers, cookies)
+      )
       raise HTTPError.new(response.code), response.code unless response.is_a?(Net::HTTPSuccess)
 
       response.body

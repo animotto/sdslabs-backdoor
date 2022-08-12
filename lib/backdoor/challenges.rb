@@ -26,6 +26,7 @@ module Backdoor
       raise ArgumentError, 'No such challenge' unless challenge
 
       challenge.new(@shell, args[1..]).exec
+    rescue FoundError
     end
   end
 
@@ -48,20 +49,20 @@ module Backdoor
       @args = args
 
       @client_static = ClientStatic.new
+
+      @logger = Logger.new(@shell.output, self.class::NAME)
     end
 
     def exec; end
 
     def found(message)
-      log("Found: #{message}")
+      @logger.puts("Found: #{message}")
+      raise FoundError
     end
 
     def not_found
-      log('Not found')
-    end
-
-    def log(message)
-      @shell.output.puts("[#{self.class::NAME}]: #{message}")
+      @logger.puts('Not found')
+      raise FoundError
     end
   end
 
@@ -74,14 +75,14 @@ module Backdoor
     OFFSET = 0x87e
 
     def exec
-      log("Downloading #{FILE}")
+      @logger.puts("Downloading #{FILE}")
       file = @client_static.get(FILE)
 
       zip_stream = Zip::InputStream.new(StringIO.new(file))
       entry = zip_stream.get_next_entry
-      log("Unzipping #{entry}")
+      @logger.puts("Unzipping #{entry}")
 
-      log("Reading MD5 hash from offset 0x#{OFFSET.to_s(16)}")
+      @logger.puts("Reading MD5 hash from offset 0x#{OFFSET.to_s(16)}")
       hash = String.new
       entry = StringIO.new(entry.get_input_stream.read)
       entry.seek(OFFSET)
@@ -90,11 +91,11 @@ module Backdoor
         hash << data[0..3]
       end
 
-      log("Calculating SHA256 hash from MD5 hash #{hash}")
+      @logger.puts("Calculating SHA256 hash from MD5 hash #{hash}")
       hash = Digest::SHA256.hexdigest(hash)
       found(hash)
     rescue HTTPError => e
-      log(e)
+      @logger.puts(e)
     end
   end
 
@@ -108,13 +109,13 @@ module Backdoor
     TEXT = 'the flag is'
 
     def exec
-      log("Getting encrypted text #{FILE}")
+      @logger.puts("Getting encrypted text #{FILE}")
       data = @client_static.get(FILE)
       match = %r{<div>\s+(.+)\s+</div>}.match(data)
       data = match[1].clone
-      log(data)
+      @logger.puts(data)
 
-      log('Searching offsets')
+      @logger.puts('Searching offsets')
       offsets = []
       TEXT.chars.each_with_index do |char, i|
         next unless ALPHABET.include?(char)
@@ -126,9 +127,9 @@ module Backdoor
 
         offsets << n
       end
-      log("Offsets: #{offsets}")
+      @logger.puts("Offsets: #{offsets}")
 
-      log('Decrypting text')
+      @logger.puts('Decrypting text')
       text = String.new
       enum = offsets.cycle
       data.each_char do |char|
@@ -158,7 +159,60 @@ module Backdoor
         '/',
         cookies: { 'username' => 'admin' }
       )
+
       found(response)
     end
   end
+
+  ##
+  # Challenge 2013-misc-75
+  class Challenge2013misc75 < ChallengeBase
+    NAME = '2013-misc-75'
+
+    PORT = 10_001
+
+    def exec
+      client = ClientWeb.new(PORT)
+      @logger.puts('Getting a number')
+      response = client.get('/')
+      not_found unless response =~ /Find the sum of First (\d+) prime numbers/
+      number = Regexp.last_match(1).to_i
+      @logger.puts(number)
+      answer = primes(number).sum
+      @logger.puts("Sending answer: #{answer}")
+      response = client.post(
+        '/',
+        data: { 'answer' => answer }
+      )
+
+      found(response)
+    end
+
+    private
+
+    def primes(n)
+      raise ArgumentError, 'Number must be greater or equal 2' unless n >= 2
+
+      numbers = []
+      (2..n).each do |i|
+        p = true
+        (2...i).each do |j|
+          next unless (i % j).zero?
+
+          p = false
+          break
+        end
+
+        next unless p
+
+        numbers << i
+      end
+
+      numbers
+    end
+  end
+
+  ##
+  # Found error
+  class FoundError < StandardError; end
 end

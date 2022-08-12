@@ -3,3 +3,9 @@ AllCops:
 
 Metrics:
   Enabled: false
+
+Naming/MethodParameterName:
+  Enabled: false
+
+Lint/SuppressedException:
+  Enabled: false
