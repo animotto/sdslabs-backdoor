@@ -265,7 +265,7 @@ module Backdoor
         response = client.get("/?st=#{i}")
         next unless response.body =~ /Flag is "(.+)"/
 
-        found(Regexp.last_match(1))
+        found(Digest::SHA256.hexdigest(Regexp.last_match(1)))
         break
       end
 
