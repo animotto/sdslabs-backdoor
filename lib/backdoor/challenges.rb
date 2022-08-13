@@ -4,6 +4,7 @@ require 'net/http'
 require 'digest'
 require 'zip'
 require 'stringio'
+require 'resolv'
 
 module Backdoor
   ##
@@ -290,6 +291,21 @@ module Backdoor
       @logger.puts("Getting #{path}")
       response = @client_static.get(path)
       found(response.body)
+    end
+  end
+
+  ##
+  # Challenge Path
+  class ChallengePath < ChallengeBase
+    NAME = 'path'
+
+    DOMAIN = 'flag.bckdr.in'
+
+    def exec
+      resolv = Resolv::DNS.new
+      @logger.puts("Getting TXT resource for domain #{DOMAIN}")
+      flag = resolv.getresource(DOMAIN, Resolv::DNS::Resource::IN::TXT)
+      found(flag.data)
     end
   end
 
