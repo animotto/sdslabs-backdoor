@@ -274,6 +274,26 @@ module Backdoor
   end
 
   ##
+  # Challenge Robot
+  class ChallengeRobot < ChallengeBase
+    NAME = 'robot'
+
+    PATH = '/ROBOT'
+    ROBOTS = 'robots.txt'
+
+    def exec
+      @logger.puts("Getting #{ROBOTS}")
+      response = @client_static.get(File.join(PATH, ROBOTS))
+      not_found unless response.body =~ /Disallow: (.*)/
+
+      path = File.join(PATH, Regexp.last_match(1))
+      @logger.puts("Getting #{path}")
+      response = @client_static.get(path)
+      found(response.body)
+    end
+  end
+
+  ##
   # Found error
   class FoundError < StandardError; end
 end
