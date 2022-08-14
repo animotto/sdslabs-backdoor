@@ -310,6 +310,21 @@ module Backdoor
   end
 
   ##
+  # Challenge Lost
+  class ChallengeLost < ChallengeBase
+    NAME = 'lost'
+
+    PORT = 17_016
+
+    def exec
+      client = ClientWeb.new(PORT)
+      response = client.post('/flag.php')
+      not_found unless response.body =~ /Here is you flag: (\w+)/
+      found(Regexp.last_match(1))
+    end
+  end
+
+  ##
   # Found error
   class FoundError < StandardError; end
 end
